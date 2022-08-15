@@ -111,6 +111,7 @@ plot(bestmodel_lm) ##qqplot（誤差の等分散正規分布）の確認
 # quantile(sim.lm@coef[,5], probs = c(0.025, 0.975)) #T.R
 
 #### 交差検証 ####
+### https://www.statology.org/k-fold-cross-validation-in-r/ ###
 library(caret)
 ctrl <- trainControl(method = "cv", number = 5)
 # AIC選択後の各モデルを交差検証（RMSE, Rsquared, MAE）によって比較  
@@ -121,5 +122,15 @@ model_lm <- train(Height ~ buried_trunk_. + buried_trunk_weight +
                     buried_trunk_years + T.R  , data = R_Beech_Roots,
                    method = "lm", trControl = ctrl)
 
+# 交差検証の結果
+# 1）RMSE, RSquared, MAE
 print(model_glm)
 print(model_lm)
+
+# 2) 最適モデルの変数の再確認
+model_glm$finalModel
+model_lm$finalModel
+
+# 3) 各リサンプリング後の結果
+model_glm$resample
+model_lm$resample
