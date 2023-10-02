@@ -11,19 +11,18 @@ install.packages("scales")
 
 #多重共線性の把握（相関係数0.7以上の説明変数対は除外する）
 library(psych)
-cor(R_Beech_Roots[3:21], use="pairwise.complete.obs", method="p") 
+cor(R_Beech_Roots[3:21], use="pairwise.complete.obs", method="p")
 
 #共線性の可視化と線形性の確認
 library(PerformanceAnalytics)
-vars <- c("Height",
-          "S.R",
-          "nemagari_percentage",
+vars <- c("wet_whole_mass",
           "wet_nemagari_mass",
-          "buried_trunk_years")
+          "top_surfacearea",
+          "bottom_surfacearea")
 new_data <- R_Beech_Roots[vars]
 chart.Correlation(new_data)
 
-####計測項目######
+#計測項目######
 #環境パラメータ：
 #1 最大積雪深（2003-04年冬から2020-21年冬までの17冬期の平均）snow_depth
 #2 斜面傾斜slope：　
@@ -57,9 +56,140 @@ chart.Correlation(new_data)
 #6 埋幹部の年数buried_trunk_years
 
 #用語の参考論文：chrome-extension://oemmndcbldboiebfnladdacbdfmadadm/https://www.jstage.jst.go.jp/article/jjfs1953/76/1/76_1_18/_pdf
-
 #### ggplot2を用いて作図 #####
+### surface area ####
+df_wet_bury <- R_Beech_Roots[c("wet_whole_mass",
+                               "top_surfacearea",
+                               "bottom_surfacearea")]
+
+# fix column names for visualization
+colnames(df_wet_bury) <- c('whole_plant','aboveground','belowground')
+
+longsurfacearea <- melt(data=df_wet_bury,
+                    id.vars="whole_plant",
+                    value.name="area")
+plot_wet_bury <- ggplot(longsurfacearea, aes(log10(whole_plant), log10(area), color=variable)) + 
+  geom_point() + geom_smooth(method="lm",se=FALSE) + labs(title="A",x = "Log Whole-plant fresh mass (kg)", y = "Log Surface Area (m^2)", colour = " ")
+plot_wet_bury
+
+lm_topsurfacearea <- lm(log10(top_surfacearea) ~ log10(wet_whole_mass), data=R_Beech_Roots)
+lm_bottomsurfacearea <- lm(log10(bottom_surfacearea) ~ log10(wet_whole_mass), data=R_Beech_Roots)
+
+summary(lm_topsurfacearea)
+summary(lm_bottomsurfacearea)
+
+# simulate coefficients (King et al., 2000)
+library(arm)
+sim.lm_topsurfacearea <- sim(lm_topsurfacearea, 1000)
+quantile(sim.lm_topsurfacearea@coef[,2], probs = c(0.025, 0.5, 0.975))
+quantile(sim.lm_topsurfacearea@coef[,1], probs = c(0.025, 0.5, 0.975))
+mean(sim.lm_topsurfacearea@coef[,2])
+mean(sim.lm_topsurfacearea@coef[,1])
+
+sim.lm_bottomsurfacearea <- sim(lm_bottomsurfacearea, 1000)
+quantile(sim.lm_bottomsurfacearea@coef[,2], probs = c(0.025, 0.5, 0.975))
+quantile(sim.lm_bottomsurfacearea@coef[,1], probs = c(0.025, 0.5, 0.975))
+mean(sim.lm_bottomsurfacearea@coef[,2])
+mean(sim.lm_bottomsurfacearea@coef[,1])
+
+sim.lm_nemagariD_originage <- sim(lm_nemagariD_originage, 1000)
+quantile(sim.lm_nemagariD_originage@coef[,2], probs = c(0.025, 0.5, 0.975))
+quantile(sim.lm_nemagariD_originage@coef[,1], probs = c(0.025, 0.5, 0.975))
+mean(sim.lm_nemagariD_originage@coef[,2])
+mean(sim.lm_nemagariD_originage@coef[,1])
+
+sim.lm_nemagarisize <- sim(lm_nemagarisize, 1000)
+quantile(sim.lm_nemagarisize@coef[,2], probs = c(0.025, 0.5, 0.975))
+quantile(sim.lm_nemagarisize@coef[,1], probs = c(0.025, 0.5, 0.975))
+mean(sim.lm_nemagarisize@coef[,2])
+mean(sim.lm_nemagarisize@coef[,1])
+
+### fresh/wet mass #####
+#df with three body organs (shoot, root, nemagari)
+df_wet_mass3 <- R_Beech_Roots[c("wet_whole_mass",
+                               "wet_shoot_mass",
+                               "wet_nemagari_mass",
+                               "wet_root_mass")]
+
+#df with two body organs (aboveground, belowground)
+df_wet_mass2 <- df_wet_3
+df_wet_mass2$bottom_mass <- df_wet_mass2$wet_nemagari_mass + df_wet_mass2$wet_root_mass
+df_wet_mass2 <- df_wet_mass2[, -which(names(df_wet_mass2) == "wet_nemagari_mass")]
+df_wet_mass2 <- df_wet_mass2[, -which(names(df_wet_mass2) == "wet_root_mass")]
+
+# fix column names for visualization
+colnames(df_wet_mass3) <- c('whole_plant','shoot','nemagari','root')
+colnames(df_wet_mass2) <- c('whole_plant','aboveground','belowground')
+
+
+longwet3 <- melt(data=df_wet_mass3, 
+                 id.vars="whole_plant",
+                 value.name="mass")
+
+longwet2 <- melt(data=df_wet_mass2, 
+                 id.vars="whole_plant",
+                 value.name="mass")
+
+plot_wet_mass3 <- ggplot(longwet3, aes(log10(whole_plant), log10(mass), color=variable)) + 
+  geom_point() + geom_smooth(method="lm",se=FALSE) + labs(title="C",x = "Log Whole-plant fresh mass (kg)", y = "Log Fresh mass (kg)", colour = " ")
+plot_wet_mass3
+
+plot_wet_mass2 <- ggplot(longwet2, aes(log10(whole_plant), log10(mass), color=variable)) + 
+  geom_point() + geom_smooth(method="lm",se=FALSE) + labs(title="B",x = "Log Whole-plant fresh mass (kg)", y = "Log Fresh mass (kg)", colour = " ")
+plot_wet_mass2
+
+# scaling lawに合わせてlog10 transformationした上で、指数を求める
+lm_wet_nemagari <- lm(log10(wet_nemagari_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots)
+lm_wet_trunk_weight <- lm(log10(wet_shoot_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots)
+lm_wet_root_weight <- lm(log10(wet_root_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots)
+
+lm_wet_aboveground <- lm(log10(aboveground) ~ log10(whole_plant), data=df_wet_mass2)
+lm_wet_belowground <- lm(log10(belowground) ~ log10(whole_plant), data=df_wet_mass2)
+
+summary(lm_wet_nemagari)
+summary(lm_wet_trunk_weight)
+summary(lm_wet_aboveground)
+summary(lm_wet_belowground)
+
+# simulate coefficients (King et al., 2000)
+detach("package:psych", unload=TRUE) #psych とsim関数が被っているため
+
+sim.lm_wet_nemagari <- sim(lm_wet_nemagari, 1000)
+sim.lm_trunk_weight <- sim(lm_trunk_weight, 1000)
+quantile(sim.lm_wet_nemagari@coef[,2], probs = c(0.025, 0.5, 0.975))
+quantile(sim.lm_wet_nemagari@coef[,1], probs = c(0.025, 0.5, 0.975))
+mean(sim.lm_wet_nemagari@coef[,2])
+mean(sim.lm_wet_nemagari@coef[,1])
+
+sim.lm_wet_trunk_weight <- sim(lm_wet_trunk_weight, 1000)
+quantile(sim.lm_wet_trunk_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
+quantile(sim.lm_wet_trunk_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
+mean(sim.lm_wet_trunk_weight@coef[,2])
+mean(sim.lm_wet_trunk_weight@coef[,1])
+
+sim.lm_wet_root_weight <- sim(lm_wet_root_weight, 1000)
+quantile(sim.lm_wet_root_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
+quantile(sim.lm_wet_root_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
+mean(sim.lm_wet_root_weight@coef[,2])
+mean(sim.lm_wet_root_weight@coef[,1])
+
+sim.lm_wet_aboveground <- sim(lm_wet_aboveground, 1000)
+quantile(sim.lm_wet_aboveground@coef[,2], probs = c(0.025, 0.5, 0.975))
+quantile(sim.lm_wet_aboveground@coef[,1], probs = c(0.025, 0.5, 0.975))
+mean(sim.lm_wet_aboveground@coef[,2])
+mean(sim.lm_wet_aboveground@coef[,1])
+
+sim.lm_wet_belowground <- sim(lm_wet_belowground, 1000)
+quantile(sim.lm_wet_belowground@coef[,2], probs = c(0.025, 0.5, 0.975))
+quantile(sim.lm_wet_belowground@coef[,1], probs = c(0.025, 0.5, 0.975))
+mean(sim.lm_wet_belowground@coef[,2])
+mean(sim.lm_wet_belowground@coef[,1])
+
 ### dry mass ####
+# df_dry_total <- R_Beech_Roots[c("dry_whole_mass",
+#                             "trunk_weight",
+#                             "total_root weight")]
+
 df_dry_nemagari <- R_Beech_Roots[c("dry_whole_mass",
                             "dry_shoot_mass",
                             "dry_nemagari_mass",
@@ -87,73 +217,27 @@ summary(lm_buried_weight)
 summary(lm_trunk_weight)
 summary(lm_root_weight)
 
-# 各値の９５％信頼区間を求める　simulate coefficients (King et al., 2000)
+# simulate coefficients (King et al., 2000)
 library(arm)
-sim.lm_trunk_weight <- sim(lm_trunk_weight, 1000)
+# sim.lm_trunk_weight <- sim(lm_trunk_weight, 1000)
 quantile(sim.lm_trunk_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
 quantile(sim.lm_trunk_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
 mean(sim.lm_trunk_weight@coef[,2])
 mean(sim.lm_trunk_weight@coef[,1])
 
-sim.lm_buried_weight <- sim(lm_buried_weight, 1000)
+# sim.lm_buried_weight <- sim(lm_buried_weight, 1000)
 quantile(sim.lm_buried_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
 quantile(sim.lm_buried_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
 mean(sim.lm_buried_weight@coef[,2])
 mean(sim.lm_buried_weight@coef[,1])
 
-sim.lm_root_weight <- sim(lm_root_weight, 1000)
+# sim.lm_root_weight <- sim(lm_root_weight, 1000)
 quantile(sim.lm_root_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
 quantile(sim.lm_root_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
 mean(sim.lm_root_weight@coef[,2])
 mean(sim.lm_root_weight@coef[,1])
 
-### fresh/wet mass #####
-df_wet_bury <- R_Beech_Roots[c("wet_whole_mass",
-                               "wet_shoot_mass",
-                               "wet_nemagari_mass",
-                               "wet_root_mass")]
-
-# fix column names for visualization
-colnames(df_wet_bury) <- c('whole_plant','shoot','nemagari','root')
-longwetbury <- melt(data=df_wet_bury,
-                 id.vars="whole_plant",
-                 value.name="weight")
-
-plot_wet_bury <- ggplot(longwetbury, aes(log10(whole_plant), log10(weight), color=variable)) + 
-                    　　geom_point() + geom_smooth(method="lm",se=FALSE)
-plot_wet_bury
-
-
-# scaling lawに合わせてlog10 transformationした上で、指数を求める
-lm_wet_nemagari <- lm(log10(wet_nemagari_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots)
-lm_wet_trunk_weight <- lm(log10(wet_shoot_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots)
-lm_wet_root_weight <- lm(log10(wet_root_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots)
-
-summary(lm_wet_nemagari)
-summary(lm_wet_trunk_weight)
-summary(lm_wet_root_weight)
-
-# simulate coefficients (King et al., 2000)
-sim.lm_wet_nemagari <- sim(lm_wet_nemagari, 1000)
-sim.lm_trunk_weight <- sim(lm_trunk_weight, 1000)
-quantile(sim.lm_wet_nemagari@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_wet_nemagari@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_wet_nemagari@coef[,2])
-mean(sim.lm_wet_nemagari@coef[,1])
-
-sim.lm_wet_trunk_weight <- sim(lm_wet_trunk_weight, 1000)
-quantile(sim.lm_wet_trunk_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_wet_trunk_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_wet_trunk_weight@coef[,2])
-mean(sim.lm_wet_trunk_weight@coef[,1])
-
-sim.lm_wet_root_weight <- sim(lm_wet_root_weight, 1000)
-quantile(sim.lm_wet_root_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_wet_root_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_wet_root_weight@coef[,2])
-mean(sim.lm_wet_root_weight@coef[,1])
-
-### Root to Shoot Ratio #####
+### SR #####
 df_wet_RS <- R_Beech_Roots[c("wet_whole_mass",
                                "R.S")]
 
@@ -175,91 +259,54 @@ quantile(sim.lm_wet_RS@coef[,1], probs = c(0.025, 0.5, 0.975))
 mean(sim.lm_wet_RS@coef[,2])
 mean(sim.lm_wet_RS@coef[,1])
 
-### mass percentage ####
-df_wet_percentage <- R_Beech_Roots[c("wet_whole_mass",
-                                   "root_percentage",
-                                   "nemagari_percentage")]
-df_wet_percentage$root_nemagari_percentage <- df_wet_percentage$root_percentage + 
-                                              df_wet_percentage$nemagari_percentage
-
-colnames(df_wet_percentage) <- c('whole_plant_mass','root percentage','nemagari percentage','root_nemagari_percentage')
-
-# dfをlong formatに変換
-longrootpercentage <- melt(data=df_wet_percentage,
-                        id.vars="whole_plant_mass",
-                        value.name="percentage")
-
-# scaling lawに合わせてlog10 transformationした上で、グラフ化
-library(ggplot2)
-plot_rootpercentage <- ggplot(longrootpercentage, aes(log10(whole_plant_mass), percentage, color=variable)) + 
-  geom_point() + geom_smooth(method="lm",se=FALSE) 
-plot_rootpercentage
-
-# scaling lawに合わせてlog10 transformationした上で、指数を求める
-lm_root_percentage <- lm(root_percentage ~ log10(wet_whole_mass), data=R_Beech_Roots)
-lm_nemagari_percentage <- lm(nemagari_percentage ~ log10(wet_whole_mass), data=R_Beech_Roots)
-lm_root_nemagari_weight <- lm(root_nemagari_percentage ~ log10(whole_plant_mass), data=df_wet_percentage)
-
-summary(lm_root_percentage)
-summary(lm_nemagari_percentage)
-summary(lm_root_nemagari_weight)
-
-# simulate coefficients (King et al., 2000)
-library(arm)
-sim.lm_root_percentage <- sim(lm_root_percentage, 1000)
-quantile(sim.lm_root_percentage@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_root_percentage@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_root_percentage@coef[,2])
-mean(sim.lm_root_percentage@coef[,1])
-
-sim.lm_nemagari_percentage <- sim(lm_nemagari_percentage, 1000)
-quantile(sim.lm_nemagari_percentage@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_nemagari_percentage@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_nemagari_percentage@coef[,2])
-mean(sim.lm_buried_weight@coef[,1])
-
-sim.lm_root_nemagari_weight <- sim(lm_root_nemagari_weight, 1000)
-quantile(sim.lm_root_nemagari_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_root_nemagari_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_root_nemagari_weight@coef[,2])
-mean(sim.lm_root_nemagari_weight@coef[,1])
-
-#### #descriptivestats ####
-lm_RS <- lm(R.S ~ log10(wet_whole_mass), data=R_Beech_Roots)
-lm_nemagariD0age <- lm(wet_whole_mass ~ D0_age, data=R_Beech_Roots)
-lm_nemagariD_originage <- lm(wet_whole_mass ~ D_origin_age, data=R_Beech_Roots)
-lm_nemagarisize <- lm(log10(wet_nemagari_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots)
-
-summary(lm_RS)
-summary(lm_nemagariD0age)
-summary(lm_nemagariD_originage)
-summary(lm_nemagarisize)
-
-# simulate coefficients (King et al., 2000)
-library(arm)
-sim.lm_RS <- sim(lm_RS, 1000)
-quantile(sim.lm_RS@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_RS@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_RS@coef[,2])
-mean(sim.lm_RS@coef[,1])
-
-sim.lm_nemagariD0age <- sim(lm_nemagariD0age, 1000)
-quantile(sim.lm_nemagariD0age@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_nemagariD0age@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_nemagariD0age@coef[,2])
-mean(sim.lm_nemagariD0age@coef[,1])
-
-sim.lm_nemagariD_originage <- sim(lm_nemagariD_originage, 1000)
-quantile(sim.lm_nemagariD_originage@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_nemagariD_originage@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_nemagariD_originage@coef[,2])
-mean(sim.lm_nemagariD_originage@coef[,1])
-
-sim.lm_nemagarisize <- sim(lm_nemagarisize, 1000)
-quantile(sim.lm_nemagarisize@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_nemagarisize@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_nemagarisize@coef[,2])
-mean(sim.lm_nemagarisize@coef[,1])
+# ### mass fraction ####
+# df_wet_percentage <- R_Beech_Roots[c("wet_whole_mass",
+#                                    "root_percentage",
+#                                    "nemagari_percentage")]
+# df_wet_percentage$root_nemagari_percentage <- df_wet_percentage$root_percentage + 
+#                                               df_wet_percentage$nemagari_percentage
+# 
+# colnames(df_wet_percentage) <- c('whole_plant_mass','root','nemagari','root + nemagari')
+# 
+# # dfをlong formatに変換
+# longrootpercentage <- melt(data=df_wet_percentage,
+#                         id.vars="whole_plant_mass",
+#                         value.name="percentage")
+# 
+# # scaling lawに合わせてlog10 transformationした上で、グラフ化
+# library(ggplot2)
+# plot_rootpercentage <- ggplot(longrootpercentage, aes(log10(whole_plant_mass), percentage, color=variable)) + 
+#   geom_point() + geom_smooth(method="lm",se=FALSE) + labs(x = "Log fresh mass (g)", y = "Root fraction (%)", colour = " ")
+# plot_rootpercentage
+# 
+# # scaling lawに合わせてlog10 transformationした上で、指数を求める
+# lm_root_percentage <- lm(root_percentage ~ log10(wet_whole_mass), data=R_Beech_Roots)
+# lm_nemagari_percentage <- lm(nemagari_percentage ~ log10(wet_whole_mass), data=R_Beech_Roots)
+# lm_root_nemagari_weight <- lm(root_nemagari_percentage ~ log10(whole_plant_mass), data=df_wet_percentage)
+# 
+# summary(lm_root_percentage)
+# summary(lm_nemagari_percentage)
+# summary(lm_root_nemagari_weight)
+# 
+# # simulate coefficients (King et al., 2000)
+# library(arm)
+# sim.lm_root_percentage <- sim(lm_root_percentage, 1000)
+# quantile(sim.lm_root_percentage@coef[,2], probs = c(0.025, 0.5, 0.975))
+# quantile(sim.lm_root_percentage@coef[,1], probs = c(0.025, 0.5, 0.975))
+# mean(sim.lm_root_percentage@coef[,2])
+# mean(sim.lm_root_percentage@coef[,1])
+# 
+# sim.lm_nemagari_percentage <- sim(lm_nemagari_percentage, 1000)
+# quantile(sim.lm_nemagari_percentage@coef[,2], probs = c(0.025, 0.5, 0.975))
+# quantile(sim.lm_nemagari_percentage@coef[,1], probs = c(0.025, 0.5, 0.975))
+# mean(sim.lm_nemagari_percentage@coef[,2])
+# mean(sim.lm_buried_weight@coef[,1])
+# 
+# sim.lm_root_nemagari_weight <- sim(lm_root_nemagari_weight, 1000)
+# quantile(sim.lm_root_nemagari_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
+# quantile(sim.lm_root_nemagari_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
+# mean(sim.lm_root_nemagari_weight@coef[,2])
+# mean(sim.lm_root_nemagari_weight@coef[,1])
 
 ####GLM、ガンマ分布######
 # model_glm <- glm(Height #応答変数は樹高（地上部の垂直伸長が森林構成種としての基盤）
