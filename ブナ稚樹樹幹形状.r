@@ -80,6 +80,8 @@ summary(lm_bottomsurfacearea)
 
 # simulate coefficients (King et al., 2000)
 library(arm)
+detach("package:psych", unload=TRUE) #psych とsim関数が被っているため
+
 sim.lm_topsurfacearea <- sim(lm_topsurfacearea, 1000)
 quantile(sim.lm_topsurfacearea@coef[,2], probs = c(0.025, 0.5, 0.975))
 quantile(sim.lm_topsurfacearea@coef[,1], probs = c(0.025, 0.5, 0.975))
