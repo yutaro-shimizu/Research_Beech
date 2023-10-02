@@ -1,6 +1,6 @@
 # Research_Beech
 
-Tracking code changes for *Let’s get down: Siebold’s beech saplings bury trunks for underground reinforcement*.
+Tracking code changes for *Allometry of young Fagus crenata: nemagari reinforces belowground development*.
 This repository includes the dataset of 25 samples and the R code for regression models.
 - R_Beech_Roots.csv: cleaned data
 - R_Beech_Roots.xlsx: meta file with unused data 
