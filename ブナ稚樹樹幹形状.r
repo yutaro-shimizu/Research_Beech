@@ -77,7 +77,9 @@ longsurfacearea <- melt(data=df_wet_bury,
                     id.vars="whole_plant",
                     value.name="area")
 plot_wet_bury <- ggplot(longsurfacearea, aes(log10(whole_plant), log10(area), color=variable)) + 
-  geom_point() + geom_smooth(method="lm",se=FALSE) + labs(title="A",x = "Log Whole-plant fresh mass (kg)", y = "Log Surface Area (m^2)", colour = " ")
+                 geom_point() + 
+                 geom_smooth(method="lm",se=FALSE) + 
+                 labs(title="A",x = "Log Whole-plant fresh mass (kg)", y = "Log Surface Area (m^2)", colour = " ")
 plot_wet_bury
 
 lm_topsurfacearea <- lm(log10(top_surfacearea) ~ log10(wet_whole_mass), data=R_Beech_Roots)
@@ -121,11 +123,15 @@ longwet2 <- melt(data=df_wet_mass2,
                  value.name="mass")
 
 plot_wet_mass3 <- ggplot(longwet3, aes(log10(whole_plant), log10(mass), color=variable)) + 
-  geom_point() + geom_smooth(method="lm",se=FALSE) + labs(title="C",x = "Log Whole-plant fresh mass (kg)", y = "Log Fresh mass (kg)", colour = " ")
+                  geom_point() + 
+                  geom_smooth(method="lm",se=FALSE) + 
+                  labs(title="C",x = "Log Whole-plant fresh mass (kg)", y = "Log Fresh mass (kg)", colour = " ")
 plot_wet_mass3
 
 plot_wet_mass2 <- ggplot(longwet2, aes(log10(whole_plant), log10(mass), color=variable)) + 
-  geom_point() + geom_smooth(method="lm",se=FALSE) + labs(title="B",x = "Log Whole-plant fresh mass (kg)", y = "Log Fresh mass (kg)", colour = " ")
+                  geom_point() + 
+                  geom_smooth(method="lm",se=FALSE) + 
+                  labs(title="B",x = "Log Whole-plant fresh mass (kg)", y = "Log Fresh mass (kg)", colour = " ")
 plot_wet_mass2
 
 # scaling lawに合わせてlog10 transformationした上で、指数を求める
@@ -149,10 +155,6 @@ CI_simulator(lm_wet_aboveground)
 CI_simulator(lm_wet_belowground)
 
 ### dry mass ####
-# df_dry_total <- R_Beech_Roots[c("dry_whole_mass",
-#                             "trunk_weight",
-#                             "total_root weight")]
-
 df_dry_nemagari <- R_Beech_Roots[c("dry_whole_mass",
                             "dry_shoot_mass",
                             "dry_nemagari_mass",
@@ -168,7 +170,8 @@ longdrynemagari <- melt(data=df_dry_nemagari,
 # scaling lawに合わせてlog10 transformationした上で、グラフ化
 library(ggplot2)
 plot_drybury <- ggplot(longdrynemagari, aes(log10(whole_plant), log10(weight), color=variable)) + 
-  geom_point() + geom_smooth(method="lm",se=FALSE) 
+                geom_point() + 
+                geom_smooth(method="lm",se=FALSE) 
 plot_drybury
 
 # scaling lawに合わせてlog10 transformationした上で、指数を求める
@@ -193,7 +196,8 @@ df_wet_RS <- R_Beech_Roots[c("wet_whole_mass",
 colnames(df_wet_RS) <- c('whole_plant','RootShoot')
 
 plot_wet_RS <- ggplot(df_wet_RS, aes(log10(whole_plant), log10(RootShoot))) + 
-  geom_point(color="red") + geom_smooth(method="lm",se=FALSE,color="red")
+               geom_point(color="red") + 
+               geom_smooth(method="lm",se=FALSE,color="red")
 plot_wet_RS
 
 # scaling lawに合わせてlog10 transformationした上で、指数を求める
