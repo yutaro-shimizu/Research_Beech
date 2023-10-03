@@ -1,12 +1,12 @@
 #### Install packages ####
-# install.packages("psych")
-# install.packages("MuMIn")
-# install.packages("caret") #　交差検証用
-# install.packages("PerformanceAnalytics")
-# install.packages("sensemakr")
-# install.packages("arm")
-# install.packages("ggplot2")
-# install.packages("scales")
+install.packages("psych")
+install.packages("MuMIn")
+install.packages("caret") #　交差検証用
+install.packages("PerformanceAnalytics")
+install.packages("sensemakr")
+install.packages("arm")
+install.packages("ggplot2")
+install.packages("scales")
 
 #95％CI用ヘルパー関数、同じ計算の処理が繰り返されるため
 CI_simulator <- function(regression_model, nsim=1000, min=0.025,max=0.975){
