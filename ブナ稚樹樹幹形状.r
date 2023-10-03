@@ -1,13 +1,21 @@
 #### Install packages ####
-install.packages("psych")
-install.packages("MuMIn")
-install.packages("caret") #　交差検証用
-install.packages("PerformanceAnalytics")
-install.packages("sensemakr")
-install.packages("arm")
-install.packages("ggplot2")
-install.packages("scales")
+# install.packages("psych")
+# install.packages("MuMIn")
+# install.packages("caret") #　交差検証用
+# install.packages("PerformanceAnalytics")
+# install.packages("sensemakr")
+# install.packages("arm")
+# install.packages("ggplot2")
+# install.packages("scales")
 
+#95％CI用ヘルパー関数、同じ計算の処理が繰り返されるため
+CI_simulator <- function(regression_model, nsim=1000, min=0.025,max=0.975){
+  sim.regression_model <- sim(regression_model, nsim)
+  print(quantile(sim.regression_model@coef[,2], probs = c(min, 0.5, max)))
+  print(quantile(sim.regression_model@coef[,1], probs = c(min, 0.5, max)))
+  print(mean(sim.regression_model@coef[,2]))
+  print(mean(sim.regression_model@coef[,1]))
+}
 
 #多重共線性の把握（相関係数0.7以上の説明変数対は除外する）
 library(psych)
@@ -81,30 +89,10 @@ summary(lm_bottomsurfacearea)
 # simulate coefficients (King et al., 2000)
 library(arm)
 detach("package:psych", unload=TRUE) #psych とsim関数が被っているため
-
-sim.lm_topsurfacearea <- sim(lm_topsurfacearea, 1000)
-quantile(sim.lm_topsurfacearea@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_topsurfacearea@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_topsurfacearea@coef[,2])
-mean(sim.lm_topsurfacearea@coef[,1])
-
-sim.lm_bottomsurfacearea <- sim(lm_bottomsurfacearea, 1000)
-quantile(sim.lm_bottomsurfacearea@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_bottomsurfacearea@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_bottomsurfacearea@coef[,2])
-mean(sim.lm_bottomsurfacearea@coef[,1])
-
-sim.lm_nemagariD_originage <- sim(lm_nemagariD_originage, 1000)
-quantile(sim.lm_nemagariD_originage@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_nemagariD_originage@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_nemagariD_originage@coef[,2])
-mean(sim.lm_nemagariD_originage@coef[,1])
-
-sim.lm_nemagarisize <- sim(lm_nemagarisize, 1000)
-quantile(sim.lm_nemagarisize@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_nemagarisize@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_nemagarisize@coef[,2])
-mean(sim.lm_nemagarisize@coef[,1])
+CI_simulator(lm_topsurfacearea)
+CI_simulator(lm_bottomsurfacearea)
+CI_simulator(lm_nemagariD_originage)
+CI_simulator(lm_nemagarisize)
 
 ### fresh/wet mass #####
 #df with three body organs (shoot, root, nemagari)
@@ -154,38 +142,11 @@ summary(lm_wet_aboveground)
 summary(lm_wet_belowground)
 
 # simulate coefficients (King et al., 2000)
-detach("package:psych", unload=TRUE) #psych とsim関数が被っているため
-
-sim.lm_wet_nemagari <- sim(lm_wet_nemagari, 1000)
-sim.lm_trunk_weight <- sim(lm_trunk_weight, 1000)
-quantile(sim.lm_wet_nemagari@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_wet_nemagari@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_wet_nemagari@coef[,2])
-mean(sim.lm_wet_nemagari@coef[,1])
-
-sim.lm_wet_trunk_weight <- sim(lm_wet_trunk_weight, 1000)
-quantile(sim.lm_wet_trunk_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_wet_trunk_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_wet_trunk_weight@coef[,2])
-mean(sim.lm_wet_trunk_weight@coef[,1])
-
-sim.lm_wet_root_weight <- sim(lm_wet_root_weight, 1000)
-quantile(sim.lm_wet_root_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_wet_root_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_wet_root_weight@coef[,2])
-mean(sim.lm_wet_root_weight@coef[,1])
-
-sim.lm_wet_aboveground <- sim(lm_wet_aboveground, 1000)
-quantile(sim.lm_wet_aboveground@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_wet_aboveground@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_wet_aboveground@coef[,2])
-mean(sim.lm_wet_aboveground@coef[,1])
-
-sim.lm_wet_belowground <- sim(lm_wet_belowground, 1000)
-quantile(sim.lm_wet_belowground@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_wet_belowground@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_wet_belowground@coef[,2])
-mean(sim.lm_wet_belowground@coef[,1])
+CI_simulator(lm_wet_nemagari)
+CI_simulator(lm_wet_trunk_weight)
+CI_simulator(lm_wet_root_weight)
+CI_simulator(lm_wet_aboveground)
+CI_simulator(lm_wet_belowground)
 
 ### dry mass ####
 # df_dry_total <- R_Beech_Roots[c("dry_whole_mass",
@@ -220,24 +181,9 @@ summary(lm_trunk_weight)
 summary(lm_root_weight)
 
 # simulate coefficients (King et al., 2000)
-library(arm)
-# sim.lm_trunk_weight <- sim(lm_trunk_weight, 1000)
-quantile(sim.lm_trunk_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_trunk_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_trunk_weight@coef[,2])
-mean(sim.lm_trunk_weight@coef[,1])
-
-# sim.lm_buried_weight <- sim(lm_buried_weight, 1000)
-quantile(sim.lm_buried_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_buried_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_buried_weight@coef[,2])
-mean(sim.lm_buried_weight@coef[,1])
-
-# sim.lm_root_weight <- sim(lm_root_weight, 1000)
-quantile(sim.lm_root_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_root_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_root_weight@coef[,2])
-mean(sim.lm_root_weight@coef[,1])
+CI_simulator(lm_trunk_weight)
+CI_simulator(lm_buried_weight)
+CI_simulator(lm_root_weight)
 
 ### SR #####
 df_wet_RS <- R_Beech_Roots[c("wet_whole_mass",
@@ -255,11 +201,7 @@ lm_wet_RS <- lm(log10(R.S) ~ log10(wet_whole_mass), data=R_Beech_Roots)
 summary(lm_wet_RS)
 
 # simulate coefficients (King et al., 2000)
-sim.lm_wet_RS <- sim(lm_wet_RS, 1000)
-quantile(sim.lm_wet_RS@coef[,2], probs = c(0.025, 0.5, 0.975))
-quantile(sim.lm_wet_RS@coef[,1], probs = c(0.025, 0.5, 0.975))
-mean(sim.lm_wet_RS@coef[,2])
-mean(sim.lm_wet_RS@coef[,1])
+CI_simulator(lm_wet_RS)
 
 # ### mass fraction ####
 # df_wet_percentage <- R_Beech_Roots[c("wet_whole_mass",
@@ -291,24 +233,9 @@ mean(sim.lm_wet_RS@coef[,1])
 # summary(lm_root_nemagari_weight)
 # 
 # # simulate coefficients (King et al., 2000)
-# library(arm)
-# sim.lm_root_percentage <- sim(lm_root_percentage, 1000)
-# quantile(sim.lm_root_percentage@coef[,2], probs = c(0.025, 0.5, 0.975))
-# quantile(sim.lm_root_percentage@coef[,1], probs = c(0.025, 0.5, 0.975))
-# mean(sim.lm_root_percentage@coef[,2])
-# mean(sim.lm_root_percentage@coef[,1])
-# 
-# sim.lm_nemagari_percentage <- sim(lm_nemagari_percentage, 1000)
-# quantile(sim.lm_nemagari_percentage@coef[,2], probs = c(0.025, 0.5, 0.975))
-# quantile(sim.lm_nemagari_percentage@coef[,1], probs = c(0.025, 0.5, 0.975))
-# mean(sim.lm_nemagari_percentage@coef[,2])
-# mean(sim.lm_buried_weight@coef[,1])
-# 
-# sim.lm_root_nemagari_weight <- sim(lm_root_nemagari_weight, 1000)
-# quantile(sim.lm_root_nemagari_weight@coef[,2], probs = c(0.025, 0.5, 0.975))
-# quantile(sim.lm_root_nemagari_weight@coef[,1], probs = c(0.025, 0.5, 0.975))
-# mean(sim.lm_root_nemagari_weight@coef[,2])
-# mean(sim.lm_root_nemagari_weight@coef[,1])
+# CI_simulator(lm_root_percentage)
+# CI_simulator(lm_nemagari_percentage)
+# CI_simulator(lm_root_nemagari_weight)
 
 ####GLM、ガンマ分布######
 # model_glm <- glm(Height #応答変数は樹高（地上部の垂直伸長が森林構成種としての基盤）
