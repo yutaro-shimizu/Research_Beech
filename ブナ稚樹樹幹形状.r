@@ -1,34 +1,20 @@
 #### Install packages ####
-install.packages("psych")
-install.packages("MuMIn")
-install.packages("caret") #　交差検証用
-install.packages("PerformanceAnalytics")
-install.packages("sensemakr")
-install.packages("arm")
-install.packages("ggplot2")
-install.packages("scales")
+# install.packages("reshape")
+# install.packages("lmodel2")
+# install.packages("ggplot2")
+# install.packages("ggpmisc")
+# install.packages("arm")
+# install.packages("psych")
+# install.packages("MuMIn")
+# install.packages("caret") #　交差検証用
+# install.packages("PerformanceAnalytics")
+# install.packages("sensemakr")
 
-#95％CI用ヘルパー関数、同じ計算の処理が繰り返されるため
-CI_simulator <- function(regression_model, nsim=1000, min=0.025,max=0.975){
-  sim.regression_model <- sim(regression_model, nsim)
-  print(quantile(sim.regression_model@coef[,2], probs = c(min, 0.5, max)))
-  print(quantile(sim.regression_model@coef[,1], probs = c(min, 0.5, max)))
-  print(mean(sim.regression_model@coef[,2]))
-  print(mean(sim.regression_model@coef[,1]))
-}
-
-#多重共線性の把握（相関係数0.7以上の説明変数対は除外する）
-library(psych)
-cor(R_Beech_Roots[3:21], use="pairwise.complete.obs", method="p")
-
-#共線性の可視化と線形性の確認
-library(PerformanceAnalytics)
-vars <- c("wet_whole_mass",
-          "wet_nemagari_mass",
-          "top_surfacearea",
-          "bottom_surfacearea")
-new_data <- R_Beech_Roots[vars]
-chart.Correlation(new_data)
+library(lmodel2)
+library(reshape)
+library(ggpmisc)
+library(arm)
+library(ggplot2)
 
 #計測項目######
 #環境パラメータ：
@@ -64,50 +50,43 @@ chart.Correlation(new_data)
 #6 埋幹部の年数buried_trunk_years
 
 #用語の参考論文：chrome-extension://oemmndcbldboiebfnladdacbdfmadadm/https://www.jstage.jst.go.jp/article/jjfs1953/76/1/76_1_18/_pdf
+
 #### ggplot2を用いて作図 #####
 ### surface area ####
-df_wet_bury <- R_Beech_Roots[c("wet_whole_mass",
-                               "top_surfacearea",
-                               "bottom_surfacearea")]
+df_surfacearea <- R_Beech_Roots[c("log10_wet_whole_mass",
+                               "log10_top_surfacearea",
+                               "log10_bottom_surfacearea")]
 
 # fix column names for visualization
-colnames(df_wet_bury) <- c('whole_plant','aboveground','belowground')
+colnames(df_surfacearea) <- c('whole_plant','aboveground','belowground')
 
-longsurfacearea <- melt(data=df_wet_bury,
+longsurfacearea <- melt(data=df_surfacearea,
                     id.vars="whole_plant",
                     value.name="area")
-plot_wet_bury <- ggplot(longsurfacearea, aes(log10(whole_plant), log10(area), color=variable)) + 
+
+plot_surfacearea <- ggplot(longsurfacearea, aes(whole_plant, value, color=variable)) + 
                  geom_point() + 
-                 geom_smooth(method="lm",se=FALSE) + 
+                 stat_ma_line(method = "SMA", se=FALSE) +
                  labs(title="A",x = "Log Whole-plant fresh mass (kg)", y = "Log Surface Area (m^2)", colour = " ")
-plot_wet_bury
+plot_surfacearea
 
-lm_topsurfacearea <- lm(log10(top_surfacearea) ~ log10(wet_whole_mass), data=R_Beech_Roots)
-lm_bottomsurfacearea <- lm(log10(bottom_surfacearea) ~ log10(wet_whole_mass), data=R_Beech_Roots)
+lm_topsurfacearea <- lmodel2(log10(top_surfacearea) ~ log10(wet_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
+lm_bottomsurfacearea <- lmodel2(log10(bottom_surfacearea) ~ log10(wet_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
 
-summary(lm_topsurfacearea)
-summary(lm_bottomsurfacearea)
-
-# simulate coefficients (King et al., 2000)
-library(arm)
-detach("package:psych", unload=TRUE) #psych とsim関数が被っているため
-CI_simulator(lm_topsurfacearea)
-CI_simulator(lm_bottomsurfacearea)
-CI_simulator(lm_nemagariD_originage)
-CI_simulator(lm_nemagarisize)
+lm_topsurfacearea
+lm_bottomsurfacearea
 
 ### fresh/wet mass #####
 #df with three body organs (shoot, root, nemagari)
-df_wet_mass3 <- R_Beech_Roots[c("wet_whole_mass",
-                               "wet_shoot_mass",
-                               "wet_nemagari_mass",
-                               "wet_root_mass")]
+df_wet_mass3 <- R_Beech_Roots[c("log10_wet_whole_mass",
+                               "log10_wet_shoot_mass",
+                               "log10_wet_nemagari_mass",
+                               "log10_wet_root_mass")]
 
 #df with two body organs (aboveground, belowground)
-df_wet_mass2 <- df_wet_3
-df_wet_mass2$bottom_mass <- df_wet_mass2$wet_nemagari_mass + df_wet_mass2$wet_root_mass
-df_wet_mass2 <- df_wet_mass2[, -which(names(df_wet_mass2) == "wet_nemagari_mass")]
-df_wet_mass2 <- df_wet_mass2[, -which(names(df_wet_mass2) == "wet_root_mass")]
+df_wet_mass2 <- R_Beech_Roots[c("log10_wet_whole_mass",
+                                "log10_wet_shoot_mass",
+                                "log10_belowground_mass")]
 
 # fix column names for visualization
 colnames(df_wet_mass3) <- c('whole_plant','shoot','nemagari','root')
@@ -122,71 +101,57 @@ longwet2 <- melt(data=df_wet_mass2,
                  id.vars="whole_plant",
                  value.name="mass")
 
-plot_wet_mass3 <- ggplot(longwet3, aes(log10(whole_plant), log10(mass), color=variable)) + 
+plot_wet_mass3 <- ggplot(longwet3, aes(whole_plant, value, color=variable)) + 
                   geom_point() + 
-                  geom_smooth(method="lm",se=FALSE) + 
+                  stat_ma_line(method = "SMA", se=FALSE) +
                   labs(title="C",x = "Log Whole-plant fresh mass (kg)", y = "Log Fresh mass (kg)", colour = " ")
 plot_wet_mass3
 
-plot_wet_mass2 <- ggplot(longwet2, aes(log10(whole_plant), log10(mass), color=variable)) + 
+plot_wet_mass2 <- ggplot(longwet2, aes(whole_plant, value, color=variable)) + 
                   geom_point() + 
-                  geom_smooth(method="lm",se=FALSE) + 
+                  stat_ma_line(method = "SMA", se=FALSE) +
                   labs(title="B",x = "Log Whole-plant fresh mass (kg)", y = "Log Fresh mass (kg)", colour = " ")
 plot_wet_mass2
 
 # scaling lawに合わせてlog10 transformationした上で、指数を求める
-lm_wet_nemagari <- lm(log10(wet_nemagari_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots)
-lm_wet_trunk_weight <- lm(log10(wet_shoot_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots)
-lm_wet_root_weight <- lm(log10(wet_root_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots)
+lm_wet_nemagari <- lmodel2(log10(wet_nemagari_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
+lm_wet_trunk_weight <- lmodel2(log10(wet_shoot_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
+lm_wet_root_weight <- lmodel2(log10(wet_root_mass) ~ log10(wet_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
 
-lm_wet_aboveground <- lm(log10(aboveground) ~ log10(whole_plant), data=df_wet_mass2)
-lm_wet_belowground <- lm(log10(belowground) ~ log10(whole_plant), data=df_wet_mass2)
+lm_wet_aboveground <- lmodel2(aboveground ~ whole_plant, data=df_wet_mass2, "interval", "interval", 99)
+lm_wet_belowground <- lmodel2(belowground ~ whole_plant, data=df_wet_mass2, "interval", "interval", 99)
 
-summary(lm_wet_nemagari)
-summary(lm_wet_trunk_weight)
-summary(lm_wet_aboveground)
-summary(lm_wet_belowground)
-
-# simulate coefficients (King et al., 2000)
-CI_simulator(lm_wet_nemagari)
-CI_simulator(lm_wet_trunk_weight)
-CI_simulator(lm_wet_root_weight)
-CI_simulator(lm_wet_aboveground)
-CI_simulator(lm_wet_belowground)
+lm_wet_nemagari
+lm_wet_trunk_weight
+lm_wet_aboveground
+lm_wet_belowground
 
 ### dry mass ####
-df_dry_nemagari <- R_Beech_Roots[c("dry_whole_mass",
-                            "dry_shoot_mass",
-                            "dry_nemagari_mass",
-                            "dry_root_mass")]
+df_dry_nemagari <- R_Beech_Roots[c("log10_dry_whole_mass",
+                            "log10_dry_shoot_mass",
+                            "log10_dry_nemagari_mass",
+                            "log10_dry_root_mass")]
 colnames(df_dry_nemagari) <- c('whole_plant','shoot','nemagari','root')
 
 # dfをlong formatに変換
-library(reshape2)
 longdrynemagari <- melt(data=df_dry_nemagari,
                   id.vars="whole_plant",
                   value.name="weight")
 
 # scaling lawに合わせてlog10 transformationした上で、グラフ化
-library(ggplot2)
-plot_drybury <- ggplot(longdrynemagari, aes(log10(whole_plant), log10(weight), color=variable)) + 
+plot_drybury <- ggplot(longdrynemagari, aes(whole_plant, value, color=variable)) + 
                 geom_point() + 
-                geom_smooth(method="lm",se=FALSE) 
+                stat_ma_line(method = "SMA", se=FALSE)
 plot_drybury
 
 # scaling lawに合わせてlog10 transformationした上で、指数を求める
-lm_buried_weight <- lm(log10(dry_nemagari_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots)
-lm_trunk_weight <- lm(log10(dry_shoot_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots)
-lm_root_weight <- lm(log10(dry_root_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots)
+lm_buried_weight <- lmodel2(log10(dry_nemagari_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
+lm_trunk_weight <- lmodel2(log10(dry_shoot_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
+lm_root_weight <- lmodel2(log10(dry_root_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
 
-summary(lm_buried_weight)
-summary(lm_trunk_weight)
-summary(lm_root_weight)
-
-# simulate coefficients (King et al., 2000)
-CI_simulator(lm_trunk_weight)
-CI_simulator(lm_buried_weight)
-CI_simulator(lm_root_weight)
+lm_buried_weight
+lm_trunk_weight
+lm_root_weight
 
 ### SR #####
 df_wet_RS <- R_Beech_Roots[c("wet_whole_mass",
@@ -197,15 +162,13 @@ colnames(df_wet_RS) <- c('whole_plant','RootShoot')
 
 plot_wet_RS <- ggplot(df_wet_RS, aes(log10(whole_plant), log10(RootShoot))) + 
                geom_point(color="red") + 
-               geom_smooth(method="lm",se=FALSE,color="red")
+               stat_ma_line(method = "SMA", se=FALSE, color="red")
 plot_wet_RS
 
 # scaling lawに合わせてlog10 transformationした上で、指数を求める
-lm_wet_RS <- lm(log10(R.S) ~ log10(wet_whole_mass), data=R_Beech_Roots)
-summary(lm_wet_RS)
+lm_wet_RS <- lmodel2(log10(R.S) ~ log10(wet_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
+lm_wet_RS
 
-# simulate coefficients (King et al., 2000)
-CI_simulator(lm_wet_RS)
 
 # ### mass fraction ####
 # df_wet_percentage <- R_Beech_Roots[c("wet_whole_mass",
@@ -222,9 +185,8 @@ CI_simulator(lm_wet_RS)
 #                         value.name="percentage")
 # 
 # # scaling lawに合わせてlog10 transformationした上で、グラフ化
-# library(ggplot2)
 # plot_rootpercentage <- ggplot(longrootpercentage, aes(log10(whole_plant_mass), percentage, color=variable)) + 
-#   geom_point() + geom_smooth(method="lm",se=FALSE) + labs(x = "Log fresh mass (g)", y = "Root fraction (%)", colour = " ")
+#   geom_point() + stat_ma_line(method = "SMA", se=FALSE) +labs(x = "Log fresh mass (g)", y = "Root fraction (%)", colour = " ")
 # plot_rootpercentage
 # 
 # # scaling lawに合わせてlog10 transformationした上で、指数を求める
@@ -240,6 +202,20 @@ CI_simulator(lm_wet_RS)
 # CI_simulator(lm_root_percentage)
 # CI_simulator(lm_nemagari_percentage)
 # CI_simulator(lm_root_nemagari_weight)
+
+
+#### 共線性の可視化と線形性の確認 ####
+#多重共線性の把握（相関係数0.7以上の説明変数対は除外する）
+# library(psych)
+# library(PerformanceAnalytics)
+# cor(R_Beech_Roots[3:21], use="pairwise.complete.obs", method="p")
+# 
+# vars <- c("wet_whole_mass",
+#           "wet_nemagari_mass",
+#           "top_surfacearea",
+#           "bottom_surfacearea")
+# new_data <- R_Beech_Roots[vars]
+# chart.Correlation(new_data)
 
 ####GLM、ガンマ分布######
 # model_glm <- glm(Height #応答変数は樹高（地上部の垂直伸長が森林構成種としての基盤）
