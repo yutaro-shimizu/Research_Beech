@@ -123,6 +123,7 @@ lm_wet_belowground <- lmodel2(belowground ~ whole_plant, data=df_wet_mass2, "int
 
 lm_wet_nemagari
 lm_wet_trunk_weight
+lm_wet_root_weight
 lm_wet_aboveground
 lm_wet_belowground
 
