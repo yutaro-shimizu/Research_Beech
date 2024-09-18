@@ -1,15 +1,14 @@
 #### Install packages ####
-# install.packages("reshape")
-# install.packages("lmodel2")
-# install.packages("ggplot2")
-# install.packages("colorBlindness")
-# install.packages("ggpmisc")
-# install.packages("arm")
-# install.packages("psych")
-# install.packages("MuMIn")
-# install.packages("caret") #　交差検証用
-# install.packages("PerformanceAnalytics")
-# install.packages("sensemakr")
+install.packages("reshape")
+install.packages("lmodel2")
+install.packages("ggplot2")
+install.packages("colorBlindness")
+install.packages("ggpmisc") # for rma regression
+install.packages("arm")
+install.packages("caret") #　交差検証用
+install.packages("PerformanceAnalytics")
+install.packages("tidyr")
+install.packages("scales")
 
 library(lmodel2)
 library(reshape)
@@ -17,6 +16,7 @@ library(ggpmisc)
 library(arm)
 library(ggplot2)
 library(colorBlindness)
+library(tidyr)
 
 #計測項目######
 #1 log10_地上部質量 log10_dry_shoot_mass
@@ -30,6 +30,8 @@ library(colorBlindness)
 ### set blind friendly color palette ###
 cbPalette <- c("#009E73", "#0072B2", "#E69F00")
 
+R_Beech_Roots <- R_Beech_Roots[1:15, ] # subset for Karayama site
+
 ### surface area ####
 df_surfacearea <- R_Beech_Roots[c("log10_dry_whole_mass",
                                "log10_top_surfacearea",
@@ -38,21 +40,28 @@ df_surfacearea <- R_Beech_Roots[c("log10_dry_whole_mass",
 # fix column names for visualization
 colnames(df_surfacearea) <- c('whole_plant','Aboveground (Shoot)','Belowground (Prostrate stem + Main root)')
 
-longsurfacearea <- melt(data=df_surfacearea,
-                    id.vars="whole_plant",
-                    value.name="area")
+longsurfacearea <- pivot_longer(data = df_surfacearea,
+                                cols = c('Aboveground (Shoot)','Belowground (Prostrate stem + Main root)'),
+                                names_to = "variable", 
+                                values_to = "value")
 
-plot_surfacearea <- ggplot(longsurfacearea, aes(whole_plant, value, color=factor(variable))) + 
-                    geom_point(color='black', shape=21, size=3, aes(fill=factor(variable))) + 
+plot_surfacearea <- ggplot(longsurfacearea, aes(whole_plant, value, color=variable, shape=variable,linetype=variable)) + 
+                    geom_point(colour = "black", size = 3.5) +
+                    geom_point(aes(colour = variable),size=3)+
+                    ylim(-5,-1.8)+
                     stat_ma_line(method = "SMA", se=FALSE) +
-                    labs(title="A",x = "Log Whole-plant Dry Mass (kg)", y = bquote("Log Surface Area "(m^2)), colour = " ") + 
-                    scale_fill_manual(values=cbPalette, name=expression(paste(italic("F. crenata")," body parts"))) +
-                    scale_colour_manual(values=cbPalette, guide=FALSE) +
-                    theme_bw() +
+                    scale_colour_manual(values=cbPalette) +
+  scale_x_continuous(labels = label_number()) +
+                    theme_bw(base_size = 20) +
+                    labs(title="a",x = "Log Whole-plant Dry Mass (kg)", y = bquote("Log Surface Area "(m^2))) +
                     theme(plot.background = element_blank(),
                           panel.grid.minor = element_blank(),
                           panel.grid.major = element_blank(),
-                          aspect.ratio=1)
+                          panel.border = element_rect(size=1.5),  
+                          legend.title = element_blank(),
+                          aspect.ratio=1,
+                          legend.position = c(.36, .9),
+                          legend.text = element_text(size = 10))
 plot_surfacearea
 
 lm_topsurfacearea <- lmodel2(log10(top_surfacearea) ~ log10(dry_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
@@ -73,44 +82,99 @@ df_dry_mass2 <- R_Beech_Roots[c("log10_dry_whole_mass",
                                 "log10_dry_shoot_mass",
                                 "log10_belowground_mass")]
 
+# scaling lawに合わせてlog10 transformationした上で、指数を求める
+lm_prostrate_weight <- lmodel2(log10(dry_prostrate_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
+lm_trunk_weight <- lmodel2(log10(dry_shoot_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
+lm_root_weight <- lmodel2(log10(dry_root_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
+lm_aboveground <- lmodel2(log10_dry_shoot_mass ~ log10_dry_whole_mass, data=df_dry_mass2, "interval", "interval", 99)
+lm_belowground <- lmodel2(log10_belowground_mass ~ log10_dry_whole_mass, data=df_dry_mass2, "interval", "interval", 99)
+
+lm_prostrate_weight
+lm_trunk_weight
+lm_root_weight
+lm_aboveground
+lm_belowground
+
+
 # fix column names for visualization
 colnames(df_dry_mass3) <- c('whole_plant','Shoot','Prostrate stem','Main root')
 colnames(df_dry_mass2) <- c('whole_plant','Aboveground (Shoot)','Belowground (Prostrate stem + Main root)')
 
-longdry2 <- melt(data=df_dry_mass2, 
-                 id.vars="whole_plant",
-                 value.name="mass")
+longdry2 <- pivot_longer(data = df_dry_mass2,
+                                cols = c('Aboveground (Shoot)','Belowground (Prostrate stem + Main root)'),
+                                names_to = "variable", 
+                                values_to = "value")
 
-longdry3 <- melt(data=df_dry_mass3, 
-                 id.vars="whole_plant",
-                 value.name="mass")
-
-plot_dry_mass2 <- ggplot(longdry2, aes(whole_plant, value, color=variable)) + 
-                  geom_point(color='black', shape=21, size=3, aes(fill=variable, shape=variable)) + 
+longdry3 <- pivot_longer(data = df_dry_mass3,
+                         cols = c('Shoot','Prostrate stem','Main root'),
+                         names_to = "variable", 
+                         values_to = "value")
+plot_surfacearea <- ggplot(longsurfacearea, aes(whole_plant, value, color=variable, shape=variable,linetype=variable)) + 
+  geom_point(colour = "black", size = 3.5) +
+  geom_point(aes(colour = variable),size=3)+
+  ylim(-5,-1.8)+
+  stat_ma_line(method = "SMA", se=FALSE) +
+  scale_colour_manual(values=cbPalette) +
+  scale_x_continuous(labels = label_number(accuracy=1),
+                     breaks = c(-4,-3,-2),
+                     minor_breaks = NULL,
+                     expand = c(0.05, 0)) +
+  theme_bw(base_size = 20) +
+  labs(title="a",x = "Log Whole-plant Dry Mass (kg)", y = bquote("Log Surface Area "(m^2))) +
+  theme(plot.background = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.border = element_rect(size=1.5),  
+        legend.title = element_blank(),
+        aspect.ratio=1,
+        legend.position = c(.39, .9),
+        legend.text = element_text(size = 11))
+plot_surfacearea
+plot_dry_mass2 <- ggplot(longdry2, aes(whole_plant, value, color=variable, shape=variable,linetype=variable)) + 
+                  geom_point(colour = "black", size = 3.5) +
+                  geom_point(aes(colour = variable),size=3)+
+                  ylim(-5,-1.8)+
                   stat_ma_line(method = "SMA", se=FALSE) +
-                  labs(title="B",x = "Log Whole-plant Dry mass (kg)", y = "Log Dry mass (kg)", colour = " ") + 
-                  scale_fill_manual(values=cbPalette, name=expression(paste(italic("F. crenata")," body parts"))) +
-                  scale_colour_manual(values=cbPalette, guide=FALSE) +
-                  theme_bw() +
+                  scale_colour_manual(values=cbPalette) +
+                  scale_x_continuous(labels = label_number(accuracy=1),
+                                     breaks = c(-4,-3,-2),
+                                     minor_breaks = NULL,
+                                     expand = c(0.05, 0)) +
+                  theme_bw(base_size = 20) +
+                  labs(title="b",x = "Log Whole-plant Dry mass (kg)", y = "Log Dry mass (kg)") + 
+                  scale_colour_manual(values=cbPalette) +
                   theme(plot.background = element_blank(),
                         panel.grid.minor = element_blank(),
                         panel.grid.major = element_blank(),
-                        aspect.ratio=1)
-
+                        panel.border = element_rect(size=1.5),  
+                        legend.title = element_blank(),
+                        aspect.ratio=1,
+                        legend.position = c(.39, .9),
+                        legend.text = element_text(size = 11))
 plot_dry_mass2
 
-plot_dry_mass3 <- ggplot(longdry3, aes(whole_plant, value, color=factor(variable))) + 
-                  geom_point(color='black', shape=21, size=3, aes(fill=factor(variable))) + 
+plot_dry_mass3 <- ggplot(longdry3, aes(whole_plant, value, color=variable, shape=variable,linetype=variable)) + 
+                  geom_point(color = "black", size = 3.5) +
+                  geom_point(aes(color = variable),size=3)+
+                  ylim(-5,-1.8)+
                   stat_ma_line(method = "SMA", se=FALSE) +
-                  labs(title="C",x = "Log Whole-plant Dry mass (kg)", y = "Log Dry mass (kg)", colour = " ") +
-                  scale_fill_manual(values=cbPalette, name=expression(paste(italic("F. crenata")," body parts"))) +
-                  scale_colour_manual(values=cbPalette, guide=FALSE) +
-                  theme_bw() +
+                  scale_colour_manual(values=cbPalette) +
+                  scale_x_continuous(labels = label_number(accuracy=1),
+                                     breaks = c(-4,-3,-2),
+                                     minor_breaks = NULL,
+                                     expand = c(0.05, 0)) +
+                  theme_bw(base_size = 20) +
+                  labs(title="c",x = "Log Whole-plant Dry mass (kg)", y = "Log Dry mass (kg)") + 
+                  scale_colour_manual(values=cbPalette) +
+                  scale_fill_discrete(breaks=c('Shoot', 'Prostrate stem', 'Main root')) +
                   theme(plot.background = element_blank(),
                         panel.grid.minor = element_blank(),
                         panel.grid.major = element_blank(),
-                        aspect.ratio=1)
-
+                        panel.border = element_rect(size=1.5),  
+                        legend.title = element_blank(),
+                        aspect.ratio=1,
+                        legend.position = c(.2, .87),
+                        legend.text = element_text(size = 11))
 
 plot_dry_mass3
 
@@ -135,15 +199,3 @@ plot_dryprostrate <- ggplot(longdryprostrate, aes(whole_plant, value, color=vari
 
 plot_dryprostrate
 
-# scaling lawに合わせてlog10 transformationした上で、指数を求める
-lm_prostrate_weight <- lmodel2(log10(dry_prostrate_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
-lm_trunk_weight <- lmodel2(log10(dry_shoot_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
-lm_root_weight <- lmodel2(log10(dry_root_mass) ~ log10(dry_whole_mass), data=R_Beech_Roots, "interval", "interval", 99)
-lm_aboveground <- lmodel2(aboveground ~ whole_plant, data=df_dry_mass2, "interval", "interval", 99)
-lm_belowground <- lmodel2(belowground ~ whole_plant, data=df_dry_mass2, "interval", "interval", 99)
-
-lm_prostrate_weight
-lm_trunk_weight
-lm_root_weight
-lm_aboveground
-lm_belowground
